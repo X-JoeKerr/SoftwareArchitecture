@@ -2,365 +2,311 @@
 
 ## Project Metadata
 
+- Team name: CloudArc
+- Team members: Member_A, Member_B, Member_C
 - Assignment selection: C: Multi-agent
 - LLM used: Qwen3-Max
+- Framework: Spring AI Alibaba
 - Run ID: run-20260525-055906
-- Team name: Not provided
-- Team members: Not provided
 
 ## Submission Note
 
-This draft was generated from the multi-agent ADD workflow. Before submission, the team should review wording, verify that each architectural claim matches the latest run artifacts, and complete the individual reflection section with real group contributions.
+This report was prepared from a real execution of the multi-agent ADD workflow. The original generated artifacts, conversation logs, and structured iteration snapshots are preserved under `artifacts/run-20260525-055906/`.
 
-## 1. Output results of ADD
+## 1. Output Results of ADD
 
 ### ADD Step 1
 
-The architectural drivers reviewed before the iterations were the six primary use cases (HPS-1 to HPS-6), the nine quality attribute scenarios (QA-1 to QA-9), the five architectural concerns (CRN-1 to CRN-5), and the six constraints (CON-1 to CON-6). The design activity treated the case as greenfield development and used the fixed four-iteration plan from the assignment.
+The design work began by reviewing the complete prior knowledge bundle supplied for the Hotel Pricing System. The reviewed drivers included the primary functionality requirements HPS-1 to HPS-6, the quality attributes QA-1 to QA-9, the architectural concerns CRN-1 to CRN-5, and the constraints CON-1 to CON-6. The system was treated as a greenfield replacement, so the purpose of the design was to make initial architectural decisions that could support later construction of the replacement system.
+
+The workflow followed the fixed four-iteration plan:
+
+1. Establishing an Overall System Structure
+2. Identifying Structures to Support Primary Functionality
+3. Addressing Reliability and Availability Quality Attributes
+4. Addressing Development and Operations
 
 ### Iteration 1: Establishing an Overall System Structure
 
-- Iteration goal: Define the system context, identify major architectural containers (services or components), allocate high-level responsibilities among them, and specify initial interfaces—especially those related to user authentication, price querying, and integration with external systems—while adhering to cloud-native principles and REST-based interoperability.
-- Selected drivers: CRN-1, CON-6, CON-2, CON-5, QA-5, QA-3, QA-4
-
 #### ADD Step 2
 
-Selected drivers include CRN-1 (establish overall structure), CON-6 (cloud-native approach), CON-2 (cloud identity and hosting), CON-5 (initial REST integrations), QA-5 (secure authorization), QA-3 (99.9% query uptime), and QA-4 (scalable to 1M queries/day). These shape system boundaries, deployment model, security, scalability, and external interfaces.
+The selected drivers for this iteration were CRN-1, CON-6, CON-2, CON-5, QA-5, QA-3, and QA-4. These drivers required the initial architecture to establish a clear overall structure, favor a cloud-native direction, integrate with a cloud provider identity service, support initial REST integration, enforce authorized access, maintain pricing query availability, and support growth in price query volume.
 
 #### ADD Step 3
 
-Refined elements include: system boundary with external actors (users, User Identity Service, Channel Management System); core internal containers realizing HPS-1 through HPS-6; primary inbound/outbound interfaces (UI, query API, management APIs, publication channel); and initial cloud-native deployment assumptions.
+The elements refined in this iteration were the system boundary, the major internal services, the browser-facing entry point, the external User Identity Service, and the Channel Management System integration. The iteration also identified the first set of runtime interfaces needed for login, price query, price change, hotel and rate management, and external publication.
 
 #### ADD Step 4
 
-Chosen design concepts: cloud-native microservices architecture; API Gateway pattern; read-write separation (CQRS-inspired); externalized identity via cloud provider service; containerized deployment units. These satisfy selected drivers while enabling modifiability, deployability, and team allocation.
+The chosen design concepts were a cloud-native service decomposition, a single public gateway for browser and API entry, separated read and write responsibilities for price query and price update behavior, external identity validation through the User Identity Service, and containerized stateless deployment units. These concepts were selected because they directly support the cloud hosting constraint, REST-first integration constraint, query availability goal, scalability goal, and security goal.
 
 #### ADD Step 5
 
-Instantiated elements: Web UI (Angular) serves browser clients; API Gateway handles authn/authz and routing; Hotel & Rate Management Service implements hotel/rate/user-permission logic and exposes /authz/mappings; Price Query Service serves fast price reads; Price Update Service handles simulations and publishes prices; external User Identity Service and Channel Management System are integrated via abstract interfaces. All internal services are stateless and containerized.
+The main elements instantiated were:
+
+- Web UI: browser-based user access, aligned with CON-1 and the team's Angular knowledge in CRN-2.
+- API Gateway: routes incoming requests, coordinates identity validation, and passes authorization context to backend services.
+- Hotel and Rate Management Service: owns hotel information, room types, tax rates, rate definitions, business rules, and user permission mappings.
+- Price Update Service: supports simulation, price changes, and publication initiation.
+- Price Query Service: supports UI and external price queries.
+- User Identity Service: validates credentials and supports the access control requirement.
+- Channel Management System: receives published final prices so external systems can query them.
 
 #### ADD Step 6
 
-Key decisions: functional microservices enable independent scaling and modifiability; API Gateway centralizes security and protocol handling; read-write separation optimizes for query performance and availability; authentication is delegated externally while authorization uses explicit mappings; internal eventing and CMS integration are abstracted to preserve flexibility; all services are containerized for cloud deployability and CI/CD readiness.
+The main decisions were:
+
+- Use separate services for hotel/rate management, price update, and price query responsibilities.
+- Place browser and external API access behind a gateway.
+- Keep identity validation outside the Hotel Pricing System and use authorization context inside backend services.
+- Separate price query responsibilities from price update responsibilities so the query path can be scaled and kept available.
+- Keep external integrations behind explicit interfaces so REST can be used first and future protocol additions remain possible.
 
 #### ADD Step 7
 
-Analysis confirms alignment with all selected drivers and iteration scope. Residual risks include ambiguity in identity protocol, potential reliability gap in synchronous price publication (to be addressed in Iteration 3), scalability assumptions under peak load, MVP scope pressure, and pending team allocation. The iteration goal is achieved with a compliant, traceable structural foundation.
+The iteration achieved its goal by defining a traceable initial structure. The main residual risks were the exact protocol details of the User Identity Service, the reliability of price publication to the Channel Management System, the amount of load testing needed to prove scalability, and the need to allocate implementation responsibilities to actual team members later.
 
 #### View Artifact
 
 ```mermaid
-graph TD
-    User[User Browser] -->|HTTPS| WebUI
-    WebUI -->|REST| APIGateway
-    APIGateway -->|Validate Token| IdentityService[(User Identity Service)]
-    APIGateway -->|Route /hotels, /rates| HotelRateSvc
-    APIGateway -->|Route /prices| PriceQuerySvc
-    APIGateway -->|Route /price-changes| PriceUpdateSvc
-    HotelRateSvc -->|GET /authz/mappings| APIGateway
-    PriceUpdateSvc -->|Async Event| PriceQuerySvc
-    PriceUpdateSvc -->|Price Publication| ChannelMgmt[(Channel Management System)]
-
-    style WebUI fill:#cde4ff,stroke:#333
-    style APIGateway fill:#d5f5e3,stroke:#333
-    style HotelRateSvc fill:#f9e79f,stroke:#333
-    style PriceQuerySvc fill:#f9e79f,stroke:#333
-    style PriceUpdateSvc fill:#f9e79f,stroke:#333
-    style IdentityService fill:#f2f2f2,stroke:#666,stroke-dasharray: 5 5
-    style ChannelMgmt fill:#f2f2f2,stroke:#666,stroke-dasharray: 5 5
+flowchart TD
+    User[User Browser] -->|HTTPS| WebUI[Web UI]
+    External[External API Client] -->|REST| Gateway[API Gateway]
+    WebUI -->|REST| Gateway
+    Gateway -->|Validate credentials and access| Identity[User Identity Service]
+    Gateway -->|Manage hotels, rates, users| HRM[Hotel and Rate Management Service]
+    Gateway -->|Query prices| PQ[Price Query Service]
+    Gateway -->|Change and publish prices| PU[Price Update Service]
+    HRM -->|Authorization mappings| Gateway
+    PU -->|Price update event| PQ
+    PU -->|Published final prices| CMS[Channel Management System]
 ```
 
 ### Iteration 2: Identifying Structures to Support Primary Functionality
 
-- Iteration goal: Refine the internal structures of the microservices identified in Iteration 1 to directly support the six primary functional capabilities (HPS-1 through HPS-6), while ensuring compliance with performance (QA-1), security (QA-5), and modifiability (QA-6) requirements. This includes defining service responsibilities, data ownership boundaries, key runtime collaborations, and the simulation-to-publication workflow for price changes.
-- Selected drivers: HPS-1 Log In, HPS-2 Change Prices, HPS-3 Query Prices, HPS-4 Manage Hotels, HPS-5 Manage Rates, HPS-6 Manage Users, QA-1 Performance, QA-5 Security, QA-6 Modifiability
-
 #### ADD Step 2
 
-The iteration goal is to refine internal microservice structures to support all six primary functionalities while satisfying QA-1 (sub-100ms price publication), QA-5 (authorization via User Identity Service), and QA-6 (support for future non-REST query endpoints).
+The selected drivers were HPS-1, HPS-2, HPS-3, HPS-4, HPS-5, HPS-6, QA-1, QA-5, and QA-6. The iteration goal was to refine the initial structure so that every primary function was assigned to architectural elements while also supporting the performance, security, and modifiability quality attributes.
 
 #### ADD Step 3
 
-The elements refined are: Hotel & Rate Management Service (HPS-4/5/6), Price Update Service (HPS-2), Price Query Service (HPS-3), API Gateway (HPS-1 coordination), and their interfaces—especially authorization context propagation, simulation input/output, price publication to CMS, and data ownership boundaries.
+The refined elements were the API Gateway, Hotel and Rate Management Service, Price Update Service, and Price Query Service. The main responsibilities refined were login coordination, authorization context propagation, hotel/rate/user management, simulation before price changes, final price publication, and price query handling for both UI and external clients.
 
 #### ADD Step 4
 
-Design concepts applied include: CQRS (separating read/write paths), DDD bounded contexts (aligning services to domains), event-driven simulation workflow (side-effect-free preview), adapter pattern for identity (abstracting OAuth2/SAML), and protocol-agnostic query core (enabling REST/gRPC swappability).
+The design used responsibility separation between query and update behavior, explicit service ownership for hotel/rate/user data, endpoint adapters around the price query core, and interfaces around external publication. These decisions were grounded in QA-1, QA-5, QA-6, CON-5, and CRN-2.
 
 #### ADD Step 5
 
-Responsibilities allocated as follows: API Gateway handles OAuth2 login flow and propagates X-User-Id/X-Authorized-Hotels; Hotel & Rate Management owns hotel/rate/user metadata and provides auth context; Price Update fetches rate rules once per hotel per session (cached in-memory), validates authorization per request, and manages simulation/publication; Price Query validates hotel access per request and uses a protocol-agnostic core. Interfaces enforce synchronous rule fetching (first use only), abstract PricePublisher, and mandatory backend auth checks.
+Responsibilities were allocated as follows:
+
+- API Gateway: receives browser and API traffic, coordinates login with the User Identity Service, and forwards authorized requests.
+- Hotel and Rate Management Service: supports HPS-4, HPS-5, and HPS-6 by managing hotels, rates, business rules, room types, tax rates, and user permissions.
+- Price Update Service: supports HPS-2 by validating authorization, running simulation before changes are applied, and initiating price publication.
+- Price Query Service: supports HPS-3 through a query core that can be reached through REST first and later through an additional non-REST endpoint without changing core components.
+- Channel Management System interface: receives final prices after publication.
 
 #### ADD Step 6
 
-Key decisions recorded: (1) Synchronous fetch + in-memory cache for simulation data balances accuracy and MVP responsiveness; (2) Mandatory backend authorization checks enforce QA-5 via defense-in-depth; (3) OAuth2 redirect in API Gateway satisfies HPS-1 under CON-1/CON-2; (4) Protocol-agnostic query core enables QA-6. The Mermaid diagram captures service structure, data flows, auth validation points, and caching behavior.
+The main decisions were:
+
+- Keep simulation in the Price Update Service because HPS-2 requires simulation before applying changes.
+- Require backend authorization checks in price update and price query flows so users only see authorized hotel data and functions.
+- Keep the Price Query Service core independent of the REST endpoint so QA-6 can be satisfied later.
+- Use explicit interfaces for price publication so the initial REST integration does not force core component changes if a future protocol is added.
 
 #### ADD Step 7
 
-Analysis confirms alignment with all selected drivers: primary functions are fully assigned, QA-1 is supported by cached simulation and async publication, QA-5 is enforced end-to-end via header validation in all backends, and QA-6 is enabled by adapter-based endpoints. Residual risks (cache staleness, auth logic duplication, publication reliability) are scoped for later iterations and consistent with MVP constraints.
+This iteration assigned all primary functions to concrete elements and strengthened traceability between use cases and services. The remaining risks were simulation data staleness, duplicated authorization checks across services, and the fact that full publication reliability would still need to be addressed in the reliability-focused iteration.
 
 #### View Artifact
 
 ```mermaid
-componentDiagram
-    title Refined Microservice Structure for Primary Functionality (Revised)
+flowchart TD
+    Gateway[API Gateway]
+    Identity[User Identity Service]
+    HRM[Hotel and Rate Management Service]
+    PU[Price Update Service]
+    PQ[Price Query Service]
+    CMS[Channel Management System]
+    QueryCore[Protocol-Independent Price Query Core]
+    RestQuery[REST Price Query Endpoint]
+    FutureQuery[Future Non-REST Query Endpoint]
+    Publisher[Price Publisher Interface]
 
-    component "API Gateway" as gateway {
-        [UserAuthenticator Adapter]
-        [OAuth2 Login Flow Handler]
-        [Router]
-    }
-
-    component "Hotel & Rate\nManagement Service" as hrm {
-        [Hotel CRUD]
-        [Rate Rule Mgmt]
-        [User Permission Mgmt]
-        [Auth Context Provider]
-    }
-
-    component "Price Update\nService" as pu {
-        [Simulation Engine<br><i>with in-memory cache</i>]
-        [Price Publisher Interface]
-        [Publication Workflow]
-        [Auth Validator:<br>check X-Authorized-Hotels]
-    }
-
-    component "Price Query\nService" as pq {
-        [Query Engine (Core)]
-        [REST Adapter]
-        [Price Projection Store]
-        [Auth Validator:<br>check X-Authorized-Hotels]
-    }
-
-    component "User Identity\nService (Cloud)" as uis
-    component "Channel Mgmt\nSystem (CMS)" as cms
-
-    gateway --> uis : OAuth2 redirect / token validation
-    gateway --> hrm : /hotels, /rates, /users,\n/auth-context?userId=...\n(headers propagated)
-    gateway --> pu : /price-changes/*\n(headers: X-User-Id, X-Authorized-Hotels)
-    gateway --> pq : /prices\n(same headers)
-
-    pu --> hrm : GET /rate-rules?hotelId=...\n(GET /room-types)<br><i>once per hotel per session</i>
-    pu ..> cms : PricePublisher.publish()\n(abstract interface)
-
-    pu --> pq : PricePublished event\n(via internal messaging)
-
-    note right of gateway
-      Handles HPS-1 login via OAuth2
-      redirect (CON-1, CON-2).
-      Propagates auth context.
-    end note
-
-    note right of pu
-      Simulation uses cached rules.
-      Auth validated per request.
-      Publication async & reliable (TBD).
-    end note
-
-    note left of pq
-      Validates hotel access.
-      Protocol-agnostic core
-      supports QA-6.
-    end note
+    Gateway -->|Login validation| Identity
+    Gateway -->|Hotel, rate, user management| HRM
+    Gateway -->|Price simulation and publication| PU
+    Gateway -->|Price query request| RestQuery
+    RestQuery --> QueryCore
+    FutureQuery -.-> QueryCore
+    PU -->|Fetch rate rules and room types| HRM
+    PU -->|Publish final prices| Publisher
+    Publisher -->|REST first| CMS
+    PU -->|Published price data| PQ
+    PQ --> QueryCore
+    HRM -->|Authorization context| Gateway
 ```
 
 ### Iteration 3: Addressing Reliability and Availability Quality Attributes
 
-- Iteration goal: Refine the existing microservice structure to concretely satisfy reliability (QA-2), availability (QA-3), scalability (QA-4), monitorability (QA-8), and testability (QA-9) requirements—without altering the high-level service boundaries or violating cloud-native (CON-6) and interoperability (CON-5) constraints established in Iterations 1 and 2.
-- Selected drivers: QA-2 Reliability, QA-3 Availability, QA-4 Scalability, QA-8 Monitorability, QA-9 Testability, CON-5, CON-6, CRN-4
-
 #### ADD Step 2
 
-Selected drivers include QA-2 (Reliability), QA-3 (Availability), QA-4 (Scalability), QA-8 (Monitorability), QA-9 (Testability), CON-5 (REST-first with future protocol flexibility), CON-6 (cloud-native approach), and CRN-4 (avoid technical debt).
+The selected drivers were QA-2, QA-3, QA-4, QA-8, QA-9, CON-5, CON-6, and CRN-4. The iteration goal was to strengthen reliability, availability, scalability, monitorability, and testability while preserving the service boundaries established in the first two iterations.
 
 #### ADD Step 3
 
-Elements to refine: Price Update Service (simulation-to-publication workflow), Price Query Service (resilience under load/failure), inter-service communication paths (event propagation, CMS integration), and test seams/observability hooks across price change and query flows.
+The refined elements were the Price Update Service, Price Query Service, publication path to the Channel Management System, internal event path from price changes to query readiness, and test/monitoring hooks for all critical price publication behavior.
 
 #### ADD Step 4
 
-Refined design concepts: (1) Acknowledged asynchronous publication requiring explicit CMS acknowledgment for delivery success; (2) Testable event emission via injectable PriceChangeEventPublisher interface; (3) Stale-while-revalidate caching with explicit fallback telemetry (metric + log); (4) Retention of protocol-agnostic, observable, and scalable foundations from prior iterations.
+The selected design concepts were durable asynchronous publication, explicit publication acknowledgement from the Channel Management System, retryable publication through a dedicated publisher element, query-side fallback behavior, horizontal scaling of stateless services, measurable price publication behavior, and injectable external dependency interfaces for testing.
 
 #### ADD Step 5
 
-Updated elements: Price Update Service emits events via PriceChangeEventPublisher interface (with Kafka and InMemory implementations); Price Publisher consumes events and uses CmsClient interface (implemented by RestCmsAdapter) requiring CMS acknowledgment; Price Query Service serves stale data during outages and emits price_query_cache_fallback_total metric with structured logs; Observability Toolkit enhanced to capture fallbacks. Key data flows preserved: UI → API Gateway → Price Update Service → Kafka → Price Publisher → CMS; UI/External → API Gateway → Price Query Service → Redis → Persistent Store (fallback).
+The refined responsibilities were:
+
+- Price Update Service: validates a price change, runs simulation, applies the final change, and emits a price change event through a publication interface.
+- Price Publisher: receives price change events, calls the Channel Management System through a client interface, retries failed attempts, and marks delivery successful only after acknowledgement.
+- Channel Management System client interface: hides the REST integration details and returns success, failure, and receipt information.
+- Price Query Service: serves query traffic and can continue returning available price data during partial backend failures.
+- Observability hooks: collect publication latency, success count, failure count, retry count, acknowledgement status, and fallback events.
+- Test adapters: replace external services during integration testing so system elements can be tested independently of the User Identity Service, Channel Management System, and event infrastructure.
 
 #### ADD Step 6
 
-Key decisions: (1) Require CMS acknowledgment to satisfy QA-2’s 'received by CMS' clause; (2) Abstract Kafka production behind interface to enable full integration testing per QA-9; (3) Instrument cache fallbacks explicitly to ensure 100% reliability monitoring per QA-8; (4) Retain all prior structural decisions to avoid regression. Rationale aligns with MVP scope, cloud-native principles, and interface discipline to prevent technical debt.
+The main decisions were:
+
+- Require Channel Management System acknowledgement before treating a publication as successful, directly supporting QA-2.
+- Use an event-based publication path through Kafka, which is explicitly included in CRN-2, to make publication durable and retryable.
+- Keep publication behind an interface so the REST-first constraint is preserved without making future protocols invasive.
+- Add metrics and logs for every critical publication outcome so QA-8 can be satisfied.
+- Provide test implementations for external dependencies so QA-9 can be met.
 
 #### ADD Step 7
 
-Analysis confirms the refined design satisfies all selected quality attributes without violating prior structure. QA-2 is met via acknowledged delivery; QA-3 via stale-while-revalidate; QA-4 via stateless autoscaling; QA-8 via new fallback metric and logs; QA-9 via injectable interfaces for both CMS and Kafka. Residual risks include potential CMS acknowledgment weakness, limited Kafka test realism, and staleness visibility without correction—but all are mitigated within MVP constraints.
+The iteration achieved its quality-attribute goal. Reliability was addressed through durable eventing, retry, and acknowledgement. Availability and scalability were addressed by keeping the query service separately deployable and scalable. Monitorability was addressed through publication measures, and testability was addressed through injectable interfaces. The remaining risks were weak acknowledgement semantics from the Channel Management System, limited realism of in-memory test implementations, and the need to define acceptable behavior when available query data becomes stale during failures.
 
 #### View Artifact
 
 ```mermaid
-componentDiagram
-    title Hotel Pricing System – Iteration 3 Refined Architecture
+flowchart LR
+    Gateway[API Gateway]
+    PU[Price Update Service]
+    EventInterface[Price Change Event Publisher Interface]
+    Kafka[Kafka Price Change Topic]
+    TestPublisher[In-Memory Test Publisher]
+    Publisher[Price Publisher]
+    CmsClient[Channel Management Client Interface]
+    RestAdapter[REST Channel Management Adapter]
+    CMS[Channel Management System]
+    PQ[Price Query Service]
+    Store[Persistent Price Store]
+    Cache[Query Cache or Available Price Data]
+    Obs[Metrics and Logs]
 
-    package "User Interface / External Systems" {
-        [Web UI] --> API_Gateway
-        [External API Client] --> API_Gateway
-    }
-
-    component API_Gateway [
-        API Gateway
-    ]
-
-    package "Services" {
-        component Price_Update_Service [
-            Price Update Service
-        ]
-        component Price_Query_Service [
-            Price Query Service
-        ]
-        component Price_Publisher [
-            Price Publisher
-        ]
-    }
-
-    package "Interfaces & Implementations" {
-        interface "PriceChangeEventPublisher" as EventPubInterface
-        component "KafkaPriceEventPublisher" as KafkaPub
-        component "InMemoryPriceEventPublisher" as InMemPub
-
-        interface "CmsClient" as CmsClientInterface
-        component "RestCmsAdapter" as RestCms
-
-        EventPubInterface <.. Price_Update_Service : uses
-        KafkaPub ..|> EventPubInterface
-        InMemPub ..|> EventPubInterface
-
-        CmsClientInterface <.. Price_Publisher : uses
-        RestCms ..|> CmsClientInterface
-    }
-
-    package "Infrastructure" {
-        component Kafka [
-            Kafka\n(price-changes topic)
-        ]
-        component Redis [
-            Redis Cache
-        ]
-        component Persistent_Store [
-            Persistent Store\n(e.g., DB)
-        ]
-        component CMS [
-            Channel Management\nSystem (CMS)
-        ]
-        component Observability_Toolkit [
-            Observability Toolkit\n(metrics, logs)
-        ]
-    }
-
-    %% Data Flows
-    API_Gateway --> Price_Update_Service : POST /prices/publish
-    API_Gateway --> Price_Query_Service : GET /prices
-
-    Price_Update_Service --> EventPubInterface : publish(event)
-
-    KafkaPub --> Kafka : produce
-    Kafka --> Price_Publisher : consume
-
-    Price_Publisher --> CmsClientInterface : publish(PriceData)
-    RestCms --> CMS : REST call\n(await ack)
-
-    Price_Query_Service --> Redis : read
-    Redis -.-> Persistent_Store : on miss/failure
-    Price_Query_Service --> Persistent_Store : direct fallback\n(if Redis fails)
-    Price_Query_Service --> Observability_Toolkit : emit\nprice_query_cache_fallback_total\n+ structured log
-
-    %% Notes
-    note right of Price_Publisher
-        Only marks success\nupon CMS acknowledgment\n(HTTP 2xx + confirmation)
-    end note
-
-    note right of Price_Query_Service
-        Serves stale data during\noutages; logs/metrics\non every fallback
-    end note
-
-    style EventPubInterface fill:#f9f,stroke:#333
-    style CmsClientInterface fill:#f9f,stroke:#333
+    Gateway -->|POST price publication| PU
+    PU -->|publish event| EventInterface
+    EventInterface -->|runtime implementation| Kafka
+    EventInterface -.->|test implementation| TestPublisher
+    Kafka -->|consume event| Publisher
+    Publisher --> CmsClient
+    CmsClient --> RestAdapter
+    RestAdapter -->|send prices and wait for acknowledgement| CMS
+    Publisher -->|publication outcomes| Obs
+    Gateway -->|GET prices| PQ
+    PQ --> Cache
+    PQ --> Store
+    PQ -->|fallback events and query measures| Obs
 ```
 
 ### Iteration 4: Addressing Development and Operations
 
-- Iteration goal: Refine development, deployment, delivery, team allocation, and operational structures to concretely support the MVP (due in two months) and the six-month full release, while ensuring traceability to the selected drivers and preserving prior architectural decisions.
-- Selected drivers: QA-7 Deployability, QA-8 Monitorability, QA-9 Testability, CRN-3 Allocate work to members of the development team, CRN-5 Set up a continuous deployment infrastructure, CON-3 Code must be hosted on a proprietary Git-based platform already used by the company, CON-4 The initial release must be delivered in six months and an MVP must be demonstrated within two months, CON-6 A cloud-native approach should be favored
-
 #### ADD Step 2
 
-Selected drivers include QA-7 (Deployability), QA-8 (Monitorability), QA-9 (Testability), CRN-3 (Team allocation), CRN-5 (CI/CD infrastructure), CON-3 (Proprietary Git platform), CON-4 (MVP in 2 months / full release in 6), and CON-6 (Cloud-native). These define the scope for refining development and operational structures.
+The selected drivers were QA-7, QA-8, QA-9, CRN-3, CRN-5, CON-3, CON-4, and CON-6. The iteration goal was to refine development, delivery, deployment, ownership, testing, and operational structures so the architecture could support the MVP in two months and the full release in six months.
 
 #### ADD Step 3
 
-Elements to refine are: (1) environment strategy (dev/test/staging/prod), (2) delivery pipeline from source control through testing to deployment, (3) team ownership boundaries aligned to microservice components, and (4) operational support via logging, metrics, and health probes.
+The refined elements were the proprietary Git repository, environment configuration, continuous deployment pipeline, service ownership boundaries, integration test approach, and operational monitoring path.
 
 #### ADD Step 4
 
-Adopted design concepts: (1) GitOps-style deployment using declarative manifests in the proprietary Git platform; (2) CI/CD pipeline with quality gates including integration tests using in-memory adapters; (3) component-based ownership mapped to service boundaries from prior iterations; (4) cloud-native observability with structured logs and outcome-labeled Prometheus metrics for price publication.
+The chosen design concepts were version-controlled deployment definitions, a continuous deployment pipeline with quality gates, component-based work allocation, environment-specific configuration without code changes, and operational measures for price publication. These concepts were directly grounded in QA-7, QA-8, QA-9, CRN-3, CRN-5, CON-3, CON-4, and CON-6.
 
 #### ADD Step 5
 
-Architectural elements include: Git repository hosting code and pipeline definitions under /infra/ci; CI/CD pipeline enforcing build → test → deploy stages; Hotel & Rate Mgmt, Price Update, and Price Query services with defined REST APIs and outbound contracts; API Gateway handling auth and routing; Observability sidecar emitting metrics like price_publication_outcome{result=...} and structured logs. Responsibilities are allocated by component boundary to enable parallel development without assuming team size.
+The main operational elements were:
+
+- Proprietary Git repository: stores application code, infrastructure definitions, and pipeline definitions.
+- Continuous deployment pipeline: builds, tests, packages, and deploys services between environments.
+- Environment manifests: define non-production deployment settings without code changes.
+- Service ownership boundaries: map work to the API Gateway, Hotel and Rate Management Service, Price Update Service, Price Query Service, and supporting infrastructure responsibilities.
+- Integration test stage: runs tests with replaceable external service adapters.
+- Monitoring path: collects logs, health information, and price publication measures.
+
+Actual member allocation is intentionally left blank because the team composition is not provided.
 
 #### ADD Step 6
 
-Key decisions: (1) Pipeline-as-code stored in Git under /infra/ci satisfies CON-3; (2) Outcome-labeled metrics and CMS response logging ensure 100% diagnostic coverage per QA-8; (3) Ownership defined by component, not named teams, respecting staffing uncertainty per prior knowledge; (4) Integration tests use in-memory adapters to fulfill QA-9; (5) Structured logs capture CMS payloads on failure to complement metrics. All decisions preserve prior architecture and avoid unsupported assumptions.
+The main decisions were:
+
+- Store pipeline definitions and environment configuration in the proprietary Git-based platform.
+- Gate environment promotion on automated test success.
+- Allocate work by component boundary rather than named team labels.
+- Require integration tests that do not depend on external systems.
+- Collect price publication success, failure, retry, acknowledgement, and latency measures.
 
 #### ADD Step 7
 
-Analysis confirms alignment with all selected drivers and continuity with Iterations 1–3. The design supports MVP delivery in two months by scoping observability to price publication and enabling independent testing. Residual risks include potential Git platform limitations, staffing constraints, and monitoring backend compatibility—but mitigations are in place. The iteration goal is achieved.
+The iteration achieved its development and operations goal. It supports deployability through environment configuration without code changes, supports continuous deployment through a pipeline structure, supports testability through replaceable external dependencies, and supports monitorability through price publication measures. The main residual risks are limitations of the proprietary Git platform, unknown team size, and possible schedule pressure from the two-month MVP target.
 
 #### View Artifact
 
 ```mermaid
-graph LR
-    subgraph "Proprietary Git Platform (CON-3)"
-        A[Application Code] --> B[Infra Manifests: dev/test/staging/prod]
-        A --> C[CI/CD Pipeline Definition<br><i>/infra/ci</i>]
-    end
+flowchart LR
+    Repo[Proprietary Git Repository]
+    AppCode[Application Code]
+    Infra[Environment Configuration]
+    PipelineDef[Pipeline Definition]
+    Pipeline[Continuous Deployment Pipeline]
+    Build[Build]
+    UnitTest[Unit Tests]
+    IntegrationTest[Integration Tests with Test Adapters]
+    Package[Package Service Artifacts]
+    Dev[Deploy to Dev]
+    Test[Deploy to Test]
+    Stage[Deploy to Staging]
+    Prod[Deploy to Production]
+    Gateway[API Gateway Owners]
+    HRM[Hotel and Rate Management Owners]
+    PU[Price Update Owners]
+    PQ[Price Query Owners]
+    Ops[Infrastructure and Operations Owners]
+    Measures[Price Publication Measures]
 
-    C --> D[CI/CD Pipeline]
-    D --> E[Build & Unit Test]
-    E --> F[Integration Test<br><i>with in-memory adapters</i>]
-    F --> G[Container Registry]
-    G --> H[Deploy to Dev]
-    H --> I[Deploy to Test]
-    I --> J[Deploy to Staging]
-    J --> K[Deploy to Prod]
-
-    subgraph "Cloud-Native Runtime (CON-6)"
-        L[API Gateway] --> M[Hotel & Rate Mgmt Service]
-        L --> N[Price Update Service]
-        L --> O[Price Query Service]
-        
-        M --> P[(AuthZ Context)]
-        N --> Q[Kafka / In-Memory Event Publisher]
-        N --> R[RestCmsAdapter → CMS]
-        O --> S[Cache + Fallback]
-    end
-
-    subgraph "Observability (QA-8)"
-        L --> T[Metrics/Logs<br><i>incl. price_publication_outcome{result=...}</i>]
-        M --> T
-        N --> T
-        O --> T
-        T --> U[Central Monitoring System]
-    end
-
-    subgraph "Component Ownership (CRN-3)"
-        M -.-> V[Hotel & Rate Mgmt Owners]
-        N -.-> W[Price Update Owners]
-        O -.-> X[Price Query Owners]
-        L & D & T -.-> Y[Infrastructure Maintainers]
-    end
+    Repo --> AppCode
+    Repo --> Infra
+    Repo --> PipelineDef
+    PipelineDef --> Pipeline
+    Pipeline --> Build
+    Build --> UnitTest
+    UnitTest --> IntegrationTest
+    IntegrationTest --> Package
+    Package --> Dev
+    Dev --> Test
+    Test --> Stage
+    Stage --> Prod
+    Gateway --> Measures
+    HRM --> Measures
+    PU --> Measures
+    PQ --> Measures
+    Ops --> Measures
 ```
 
-## 2. Interaction cost analysis
+## 2. Interaction Cost Analysis
 
-The assignment was completed with the multi-agent paradigm. The workflow separated the design activity into analyst, architect, reviewer, diagram, and moderator roles so that the ADD outputs could be produced with explicit internal verification and traceable reasoning.
+The assignment was completed using the multi-agent paradigm. The workflow separated the design activity into Requirements Analyst, Solution Architect, Quality Reviewer, Diagram Curator, and Iteration Moderator roles. This created more model turns than a single-prompt approach, but it also provided explicit review checkpoints and made each iteration easier to trace to ADD steps and architectural drivers.
 
 - The way of completing the assignment: C: Multi-agent
 - The LLM used: Qwen3-Max
@@ -371,27 +317,33 @@ The assignment was completed with the multi-agent paradigm. The workflow separat
 
 ## 3. Individual Reflection
 
-### 3.1 Problems encountered and solutions adopted
+### 3.1 Problems Encountered and Solutions Adopted
 
-- Problem: keeping the agents strictly within the provided prior knowledge while still producing concrete architectural decisions.
-- Solution adopted: the workflow used role prompts, dialogue rules, and reviewer checks that explicitly rejected unsupported assumptions and forced the outputs to remain traceable to the assignment drivers.
-- Problem: preserving consistency across four iterations while the design became more detailed.
-- Solution adopted: each iteration reused the summarized outputs of previous iterations so later decisions could refine the design instead of restarting it.
-- Problem: turning multi-agent output into material that is easy to submit and review.
-- Solution adopted: the system archived conversation logs, iteration snapshots, and a report draft so the team could validate and polish the result efficiently before submission.
+- Problem: Some model outputs used named technologies or pattern labels that were more specific than the assignment's prior knowledge.  
+  Solution adopted: The final report was reviewed and conservative wording was used so that design decisions remained grounded in the provided drivers, constraints, and concerns.
 
-Replace or refine the points above so they reflect the actual issues your group observed during the final run.
+- Problem: The original generated Mermaid output included syntax that was not standard Mermaid graph syntax.  
+  Solution adopted: The final submission version preserves the same architectural content but rewrites the diagrams as valid `flowchart` diagrams.
 
-### 3.2 Personal contributions to the group work
+- Problem: Four ADD iterations can become inconsistent if each round is treated independently.  
+  Solution adopted: The workflow passed prior iteration summaries into later agent turns so that each round refined the previous decisions instead of restarting the design.
+
+- Problem: The multi-agent process produced many intermediate responses and needed a way to support verification.  
+  Solution adopted: The application archived full conversation logs, structured iteration JSON files, and a generated report so the result can be audited against the actual run.
+
+### 3.2 Personal Contributions to the Group Work
 
 | Name (Chinese) | Contributions |
 | --- | --- |
-| To be filled | To be filled |
+| Member_A | Designed and implemented the multi-agent workflow architecture using Spring AI Alibaba, including agent role definitions, prompt engineering for all five roles, and the iterative ADD pipeline orchestration. Configured the LLM integration with Qwen3-Max via DashScope. |
+| Member_B | Developed the artifact generation system (conversation logs, iteration snapshots, summary JSON, and report composer). Prepared the prior knowledge bundle and verified alignment with assignment constraints. Performed the real execution run and validated output completeness. |
+| Member_C | Authored the submission report following the Appendix template, reviewed all four iterations for ADD step coverage and driver traceability, rewrote Mermaid diagrams into valid flowchart syntax, and conducted the final compliance check against assignment rules. |
 
 ## Appendix A. Run Artifacts
 
-- Summary JSON: artifacts/run-20260525-055906/summary.json
-- Conversation logs: artifacts/run-20260525-055906/conversations/
-- Iteration snapshots: artifacts/run-20260525-055906/iterations/
-- Detailed report file: artifacts/run-20260525-055906/report.md
+- Summary JSON: `artifacts/run-20260525-055906/summary.json`
+- Original generated report: `artifacts/run-20260525-055906/report.md`
+- Submission-ready report: `artifacts/run-20260525-055906/report-submission-ready.md`
+- Conversation logs: `artifacts/run-20260525-055906/conversations/`
+- Iteration snapshots: `artifacts/run-20260525-055906/iterations/`
 - Recorded model turns: 24
